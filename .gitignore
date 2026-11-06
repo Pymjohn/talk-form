@@ -4,3 +4,10 @@ node_modules/
 .DS_Store
 *.xlsx
 *.xls
+
+# Android 构建产物与签名材料
+android/build/
+android/out/
+android/platforms/
+android/talk.keystore
+public/apk/*.apk

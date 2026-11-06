@@ -1,126 +1,191 @@
-# xtgl-talk-form · 谈心谈话手机端填写（PWA）
+# 谈心谈话 · 手机端填表 + 自动落库
 
-把「智慧学工 → 谈心谈话填写」搬到手机上：填完 → 预览确认 → 入队 → 由本地程序驱动浏览器落库。
+把高校「智慧学工」里的**谈心谈话记录填写**搬到手机上：手机上填完 → 入队 → 本机浏览器（CDP）自动填进学工系统，附带重点关注学生的周期提醒、日历同步和 Android 常驻 App。
 
-版本 **1.1.0**。当前进度：**第一步已完成**（手机端表单 + 队列 + 常驻服务），第二步（CDP 自动填表落库）待接入。
+> 目标系统：大连理工大学 智慧学工（`dutxg.dlut.edu.cn`）。页面选择器是按这套系统写的，换学校需要改 `code/*.mjs` 里的选择器与 URL。
 
-## 结构
+---
 
-```
-xtgl-talk-form/
-├── server.mjs              # 零依赖 HTTP 服务（表单页 + 队列 API + 静态资源）
-├── public/
-│   ├── index.html          # 表单页（移动优先，字段枚举由服务端注入）
-│   ├── manifest.webmanifest
-│   ├── sw.js               # 离线缓存外壳
-│   └── icon-{192,512}.png
-└── data/
-    ├── token.txt           # 访问令牌（600 权限，首次启动自动生成）
-    └── queue.jsonl         # 待提交队列，一行一条
-```
+## 1. 它由哪几块组成
 
-## 启动
+`§
+手机浏览器 / Android App (WebView)
+        │  HTTPS（Tailscale serve）
+        ▼
+   server.mjs  (Node，8787)  ←── data/token.txt 鉴权
+        │  queue.jsonl
+        ▼
+   cdp_submit.mjs  ──CDP──▶  常驻 Chrome ──▶  学工系统（自动填表、截图回执）
+        ▲
+        └── focus.mjs / focus_cycle.mjs（重点关注名单 + 双周周期计算）
+`§
 
-```bash
-cd ~/project/SciTools/xtgl-talk-form
-node server.mjs                 # 监听 0.0.0.0:8787
-TALK_PORT=9000 node server.mjs  # 换端口
-```
+| 组件 | 作用 |
+|---|---|
+| `server.mjs` | 零依赖 HTTP 服务：表单页、队列 API、SSE 事件流、日历提醒内容、附件库 |
+| `public/` | 移动端 PWA：填表、名单、档案、关注、日志；离线可填、自动排队 |
+| `code/cdp_submit.mjs` | 消费队列，驱动常驻 Chrome 把记录填进学工系统 |
+| `code/focus.mjs` | 抓取「重点关注」名单（三表按下标拼接） |
+| `code/focus_cycle.mjs` | 双周考核周期计算（周期 #0 = 2026-09-28 起，每 14 天） |
+| `code/login.mjs` | 学工 CAS 自动登录（读 `~/pw.txt`） |
+| `android/` | App 3.3：WebView 壳 + 前台 SSE 服务 + 顶部状态横幅 + 系统日历写入 |
 
-访问：`http://127.0.0.1:8787/?k=<data/token.txt 里的值>`  
-首次带 `?k=` 会写入 Cookie，之后直接开根路径即可。
+---
 
-## 常驻部署（systemd 用户服务）
+## 2. 快速开始（只跑网页版）
 
-```bash
+需要 Node ≥ 18。唯一依赖是 `web-push`（Web Push 在国内基本连不上，不启用也不影响其他功能）。
+
+`§bash
+git clone <this-repo> talk-form && cd talk-form
+npm install
+node server.mjs          # 监听 0.0.0.0:8787
+`§
+
+首次启动会在 `data/token.txt` 自动生成访问令牌（权限 600）。
+
+打开：`http://127.0.0.1:8787/?k=<token>`
+带一次 `?k=` 后会写 Cookie，之后直接开根路径即可。
+
+> `http://内网IP:8787` 只能当普通网页用；要装成 PWA（离线、桌面图标、通知），必须走 HTTPS，见第 4 节。
+
+---
+
+## 3. 接入学工系统（自动落库）
+
+1. **准备账号**：把学工系统的账号、密码写进 `~/pw.txt`，两行，第一行账号、第二行密码。
+   `§bash
+   chmod 600 ~/pw.txt
+   `§
+2. **起一个常驻浏览器**（带 CDP，9222）：
+   `§bash
+   /opt/openbrowser/openbrowser --remote-debugging-port=9222 \
+     --user-data-dir="$HOME/.local/share/openbrowser-auto" \
+     http://dutxg.dlut.edu.cn/gzsc/ &
+   `§
+   用 systemd 常驻见 `deploy/talk-browser.service`。
+3. **登录**：`node code/login.mjs`（会话过期时服务端会自动调用它重登一次）。
+4. **提交**：网页点「提交」入队后，服务端 watcher 会调用 `cdp_submit.mjs` 落库。
+
+> 9222 是浏览器调试端口，别暴露到公网。
+
+---
+
+## 4. 手机安装（Tailscale + HTTPS）
+
+Service Worker 只在安全上下文生效，所以需要一个真证书的 https 域名。最省事的是 Tailscale：
+
+`§bash
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo systemctl enable --now tailscaled
+sudo tailscale up                       # 打开输出的链接授权
+sudo tailscale serve --bg --https=443 http://127.0.0.1:8787
+tailscale serve status                  # 拿到 https://<机器名>.<tailnet>.ts.net
+`§
+
+手机装 Tailscale 客户端登录同一账号 → 浏览器打开该域名 → 「添加到主屏幕 / 安装应用」。
+
+---
+
+## 5. 常驻部署（systemd 用户服务）
+
+`§bash
 mkdir -p ~/.config/systemd/user
 cp deploy/talk-form.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now talk-form
-sudo loginctl enable-linger $USER     # 未登录/重启后仍运行
-```
+sudo loginctl enable-linger $USER        # 未登录/重启后仍运行
+`§
 
-状态与日志：
+默认假设仓库放在 `~/talk-form`；放在别处就改 `WorkingDirectory`，或把 `TALK_ROOT` 写进 service 的 `Environment`。
 
-```bash
-systemctl --user status talk-form
-journalctl --user -u talk-form -f
-```
+---
 
-改代码后：`systemctl --user restart talk-form`。
+## 6. Android App（可选）
 
-## 字段与校验
+App 提供：WebView 壳、前台 SSE 常驻连接、页面顶部蓝色横幅（连接状态 / 最新提醒）、把提醒写进系统日历。
 
-| 字段 | 校验 |
-|---|---|
-| 姓名 xm | **必填**（重名时需补学号或提交后手动指定） |
-| 学号 xh | 选填；填了必须是 6–14 位数字，用于精确锁定学生 |
-| 日期 thrq / 时间 kssj | YYYY-MM-DD / HH:MM |
-| 时长 thsc | 1–600 分钟 |
-| 地点 thdd | 非空 |
-| 方式/发起人/社会工作/自评/跟踪 | 必须命中枚举 |
-| 类别 leibie | 至少一项（多选） |
+### 6.1 改配置
 
-枚举集中写在 `server.mjs` 的 `ENUMS`，与学工系统保持一致；改枚举只改这一处，页面自动跟着变。
+`android/src/com/talk/notify/Const.java`：
 
-## API
+`§java
+public static final String BASE  = "https://your-host.example.com";  // 你的 HTTPS 地址
+public static final String TOKEN = "REPLACE_WITH_YOUR_TOKEN";         // data/token.txt
+`§
+
+### 6.2 构建
+
+不需要 Android Studio，用 apt 里的工具链即可：
+
+`§bash
+sudo apt install openjdk-17-jdk-headless android-sdk-build-tools
+# android/platforms/android.jar（API 34）自己放进去，来源见 code/build_apk.sh 注释
+
+cd android
+keytool -genkeypair -keystore talk.keystore -alias talk -keyalg RSA -keysize 2048 \
+  -validity 10000 -storepass changeit -keypass changeit -dname "CN=talk"
+cd ..
+TALK_KS_PASS=changeit bash code/build_apk.sh     # 产物在 public/apk/
+`§
+
+可用环境变量：`TALK_KEYSTORE`（签名文件）、`TALK_KS_PASS`（口令）、`TALK_OUT`（输出目录）。
+
+App 内置自更新：`/api/app/version` + `/apk/talk-notify.apk`。把接口里的版本文件放在 `public/apk/talk-notify.version.json`。
+
+---
+
+## 7. 配置项
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `TALK_PORT` | 8787 | 服务端口 |
+| `TALK_ROOT` | `~/talk-form` | 数据目录所在的项目根 |
+| `TALK_PY` | `python3` | 带 pandas 的解释器（md→docx、名单导入） |
+| `TALK_BASE` | — | Termux 脚本用的服务地址 |
+| `TALK_TOKEN` | — | Termux 脚本用的令牌（或写 `~/.talk-token`） |
+| `CDP_PORT` | 9222 | 常驻浏览器调试端口 |
+
+字段枚举集中在 `server.mjs` 的 `ENUMS`，改一处页面自动跟着变。
+
+---
+
+## 8. 关键接口
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | `/?k=<token>` | 表单页 |
-| POST | `/api/submit` | 入队，返回 `{ok,id}`；校验失败返回 `{ok:false,errors[]}` |
-| GET | `/api/items` | 最近 50 条（倒序） |
+| POST | `/api/submit` | 入队 |
+| GET | `/api/items` | 最近记录 |
+| GET | `/api/daily-brief` | App 用的日历提醒内容（本周期剩余天数 + 未谈名单） |
+| GET | `/api/focus` | 重点关注状态（含周期与剩余天数） |
+| POST | `/api/focus/refresh` | 重新抓取名单（失败会自动登录重试） |
+| GET | `/api/alerts/stream` | SSE 事件流（App / 网页实时提醒） |
+| POST | `/api/alerts/test` | 发一条测试通知 |
 | GET | `/health` | 存活检查（无鉴权） |
 
-提交示例：
+---
 
-```bash
-T=$(cat data/token.txt)
-curl -X POST "http://127.0.0.1:8787/api/submit?k=$T" -H 'content-type: application/json' -d '{
-  "xh":"20241021036","xm":"谢鑫","thrq":"2026-10-28","kssj":"19:00","thsc":"20","thdd":"104",
-  "fangshi":"面谈","famaoren":"辅导员","shegong":"无","leibie":["重点关注"],
-  "guanjianci":"学业压力","yaodian":"…","fenxi":"…","zipin":"效果很好","genzong":"暂不需要跟踪"
-}'
-```
+## 9. 安全与合规
 
-## 装到手机桌面（Tailscale + HTTPS）
+- 服务默认绑 `0.0.0.0`，仅靠 token 鉴权：**只挂 tailnet 或反代加认证，不要直接暴露公网**。
+- `data/` 下是学生个人信息（姓名、学号、谈话记录），已在 `.gitignore` 里；建议 `chmod 700 data`。
+- `~/pw.txt` 是学工账号密码，权限 600，不要提交、不要进日志。
+- 令牌泄露：删掉 `data/token.txt` 重启即可重生成，手机上重新带一次 `?k=`。
+- 本工具只是把你自己有权限的重复操作自动化，请遵守学校系统的使用规定，不要用于批量抓取或他人账号。
 
-Service Worker 只在安全上下文生效，`http://<内网IP>:8787` 只能当普通网页用，**装不成 PWA**。用 Tailscale 给一个真证书的 https 域名：
+---
 
-**1. 在 WSL 里装 Tailscale**（需要你输入 sudo 密码，我代不了）
+## 10. 已知限制
 
-```bash
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo systemctl enable --now tailscaled
-sudo tailscale up          # 输出一个登录链接，浏览器打开并授权
-```
+1. 选择器绑定大工智慧学工，换学校要改 `cdp_submit.mjs` / `focus.mjs`。
+2. 学工 CAS 会话会过期；服务端会自动重登一次，`~/pw.txt` 缺失时仍需手动。
+3. 多标签页时学工表单要限定 `.ant-tabs-tabpane-active`，否则会填错面板。
+4. Android 8+ 前台服务必须带通知；不想要通知栏可以在系统设置里关掉该渠道，服务仍运行。
+5. 日历只在每天 18:00（闹钟）和打开 App 时同步，不是实时。
 
-**2. 手机装 Tailscale 客户端，登录同一个账号**
+---
 
-**3. 起 HTTPS 反代**
+## 许可证
 
-```bash
-sudo tailscale serve --bg --https=443 http://127.0.0.1:8787
-tailscale serve status     # 看域名，形如 https://<机器名>.<tailnet>.ts.net
-```
-
-**4. 手机浏览器打开该域名 → 加入主屏 / 安装应用**
-
-iOS：分享 → 添加到主屏幕；Android Chrome：菜单 → 安装应用。
-
-之后桌面图标点开就是全屏表单，断网也能填（草稿存本地，提交时排队）。
-
-## 安全
-
-- 服务绑 `0.0.0.0`，靠 `token` 鉴权；**不要**把 8787 直接暴露到公网，只走 tailnet。
-- `data/queue.jsonl` 含学生姓名、学号、手机号——属个人信息。建议 `chmod 700 data`，不要进版本库。
-- 令牌泄露就删 `data/token.txt` 重启，会自动重生成。
-
-## 下一步（第二步）
-
-`queue.jsonl` 里的记录目前只是排队，还没有写进学工系统。第二步要做：
-
-1. 消费队列 → CDP 打开「谈心谈话填写」页
-2. 按学号选人 → 按标签定位填表 → 保存草稿
-3. 截图回执 → 回写记录状态（`queued → drafted → confirmed`）
-4. 提交前仍需一次人工确认（页面内或命令），避免解析错误直接落库
+MIT，见 [LICENSE](LICENSE)。
