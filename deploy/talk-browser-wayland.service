@@ -1,0 +1,15 @@
+[Unit]
+Description=Resident browser for talk-form CDP automation (Wayland window, fallback)
+After=default.target
+
+[Service]
+ExecStart=/opt/openbrowser/openbrowser --ozone-platform=wayland --force-device-scale-factor=1 --remote-debugging-port=9222 --user-data-dir=%h/.local/share/openbrowser-auto --no-first-run --no-default-browser-check http://dutxg.dlut.edu.cn/gzsc/
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=GTK_IM_MODULE=fcitx
+Environment=QT_IM_MODULE=fcitx
+Environment=XMODIFIERS=@im=fcitx
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

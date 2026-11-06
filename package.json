@@ -1,0 +1,24 @@
+{
+  "name": "talk-form",
+  "version": "2.22.3",
+  "description": "谈心谈话手机端填写（PWA）+ 待提交队列，配合 CDP 自动落库",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "TALK_PORT=8787 node server.mjs"
+  },
+  "files": [
+    "server.mjs",
+    "public/",
+    "deploy/",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

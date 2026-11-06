@@ -1,0 +1,1679 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1216">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>谈心谈话</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<style>
+  :root{--bg:#f6f7f9;--card:#ffffff;--card2:#eef1f4;--input:#ffffff;--line:#e2e6ea;--text:#15181d;--dim:#67707c;--accent:#2563eb;--ok:#16a34a;--err:#dc2626;--warn:#d97706;--header-bg:rgba(246,247,249,.94);--bar-fade:rgba(246,247,249,1);--shadow:0 1px 3px rgba(16,24,40,.06)}
+  :root[data-theme=dark]{--bg:#0f1216;--card:#171b21;--card2:#1c222a;--input:#0c1014;--line:#262c35;--text:#e8edf4;--dim:#8b96a5;--accent:#3b82f6;--ok:#22c55e;--err:#ef4444;--warn:#f59e0b;--header-bg:rgba(15,18,22,.94);--bar-fade:rgba(15,18,22,1);--shadow:none}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  /* 不用 overscroll-behavior，靠 JS 只拦截横向手势，保留浏览器下拉刷新 */
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+  header{position:sticky;top:0;z-index:20;background:var(--header-bg);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:calc(12px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left))}
+  .hdrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+  header .sub{margin:0 0 6px;font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:18px}
+  header .sub b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+  header .sub .s-warn{color:#d97706}
+  header .sub .s-warn b{color:#d97706}
+  header .sub .s-ok{color:var(--ok)}
+  header .sub .s-sep{opacity:.45}
+  header .sub [data-go]{cursor:pointer}
+  .hdrow h1{margin:0;font-size:17px;font-weight:600}
+  .hdact{display:flex;align-items:center;gap:6px}
+  .theme.icon{width:34px;padding:0;font-size:17px;line-height:1}
+  .theme{height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--dim);font-size:13px;font-weight:600;line-height:1;box-shadow:var(--shadow);transition:transform .12s ease}
+  .theme:active{transform:scale(.93)}
+  /* 仅在切换瞬间启用颜色过渡，平时交互保持即时响应 */
+  html.theme-anim, html.theme-anim *{transition:background-color .32s ease,color .32s ease,border-color .32s ease,box-shadow .32s ease,fill .32s ease}
+  /* 顶部页签：分段控件（滑块选中） */
+  .tabs{position:relative;display:flex;background:var(--card2);border-radius:11px;padding:3px;margin:2px 0 8px}
+  .seg-thumb{position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px) / 4);background:var(--card);border-radius:8px;box-shadow:0 1px 2px rgba(16,24,40,.10),0 0 0 .5px rgba(16,24,40,.04);transition:transform .28s cubic-bezier(.34,.9,.4,1)}
+  .tab{flex:1;position:relative;z-index:1;background:none;border:none;color:var(--dim);font:inherit;font-size:14px;font-weight:600;padding:7px 0 7px;text-align:center;border-radius:8px}
+  .tab.on{color:var(--text)}
+  /* 统一按压反馈：变暗 + 轻微缩放 */
+  button,.tab,summary,.theme,.chip,.item,[data-go],[data-edit],.attach-chip{-webkit-user-select:none;user-select:none;transition:transform .09s ease,background-color .1s ease,border-color .1s ease,color .1s ease}
+  /* 只缩放，不改透明度：选中态会同时变底色，叠上半透明会透出白底 → 蓝白闪 */
+  button:active,.tab:active,summary:active,.theme:active,.chip:active,[data-go]:active,[data-edit]:active{transform:scale(.96)}
+  /* 纯按钮（不会变选中态的）才加变暗 */
+  button:active:not(.chip):not(.tab),summary:active,.theme:active{opacity:.9}
+  .chip:active{transform:scale(.96)}
+  .item:active{transform:scale(.985);background:var(--card2)}
+  button:disabled,.btn:disabled{transform:none!important;opacity:.5!important}
+
+  .badge{display:inline-block;min-width:18px;padding:1px 5px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;vertical-align:1px}
+  main{padding:12px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  section h2{margin:0 0 12px;font-size:13px;color:var(--dim);font-weight:600;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center}
+  section h2 em{font-style:normal;color:var(--ok);font-size:12px}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1;min-width:0}
+  .f{display:block;margin-bottom:14px}
+  .f:last-child{margin-bottom:0}
+  .f>span{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
+  input,textarea,select{width:100%;background:var(--input);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:16px;font-family:inherit;touch-action:pan-y}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+  textarea{min-height:92px;resize:vertical;line-height:1.6}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{padding:9px 13px;border-radius:999px;border:1px solid var(--line);background:var(--input);color:var(--text);font-size:14px}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .hint{font-size:12px;color:var(--dim);margin-top:6px}
+  input[type=file]{padding:10px 12px;font-size:14px}
+  input[type=file]::file-selector-button{background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin-right:10px;font:inherit;font-size:14px}
+  .attach-chip{display:inline-flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:8px}
+  .attach-chip b{font-weight:600}
+  .attach-chip button{background:none;border:none;color:var(--err);font-size:14px;padding:0 2px}
+  .bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bar-fade) 62%,transparent);display:flex;gap:10px}
+  .btn{flex:1;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:600;font-family:inherit}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.ghost{background:var(--card2);color:var(--text);flex:0 0 92px}
+  .btn.sm{flex:none;padding:10px 14px;font-size:14px;border-radius:10px;background:var(--card2);color:var(--text)}
+  .btn.sm.primary{background:var(--accent);color:#fff}
+  #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:112px;background:var(--card2);border:1px solid var(--line);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;max-width:88vw;z-index:60;text-align:center}
+  #toast.show{opacity:1}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;flex-direction:column;justify-content:flex-end;z-index:50}
+  .overlay.show{display:flex}
+  .sheet{background:var(--card);border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:86vh;overflow:auto}
+  .sheet h3{margin:0 0 12px;font-size:16px}
+  .kv{display:flex;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
+  .kv b{color:var(--dim);font-weight:500;flex:0 0 82px}
+  .kv span{flex:1;word-break:break-word}
+  .actions{display:flex;gap:10px;margin-top:16px}
+  .list{font-size:13px;color:var(--dim)}
+  .list div{padding:7px 0;border-bottom:1px dashed var(--line)}
+  .err{color:var(--err)}
+  /* 名单 */
+  .daygroup{margin-bottom:14px}
+  .daygroup:last-child{margin-bottom:0}
+  .daybar{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--dim);margin:0 0 8px;padding:0 2px}
+  .daybar b{color:var(--text);font-size:14px;font-weight:600}
+  .item{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--input);margin-bottom:8px}
+  .item.done{opacity:.5}
+  /* 已过期：姓名所在卡片左侧描一条黄边，不再单独标注 */
+  .item.late{box-shadow:inset 3px 0 0 #f59e0b}
+  .item.late .time{color:#f59e0b}
+  .item.late .act .btn.primary{background:#f59e0b;color:#fff}
+  .item .time{flex:0 0 46px;font-size:13px;color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums}
+  .item .who{flex:1;min-width:0}
+  .item .who b{display:block;font-size:15px;font-weight:600}
+  .item .who small{color:var(--dim);font-size:12px}
+  .item .act{display:flex;gap:6px;flex:0 0 auto}
+  .donegroup{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+  .donegroup summary{list-style:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .donegroup summary::-webkit-details-marker{display:none}
+  .donegroup[open] summary{margin-bottom:8px}
+  .donegroup .item:last-child{margin-bottom:0}
+  #focusList .who small{display:block;line-height:1.7}
+  #focusList .who small span{display:block}
+  #focusList .who b{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .pill{font-size:11px;padding:2px 7px;border-radius:8px;background:var(--card2);color:var(--dim)}
+  .pill.ok{background:rgba(34,197,94,.16);color:var(--ok)}
+  .pill.warn{background:rgba(245,158,11,.18);color:#f59e0b}
+  .pill.err{background:rgba(239,68,68,.16);color:#ef4444}
+  #offlineBar{position:fixed;left:0;right:0;top:0;z-index:99;display:none;background:#b45309;color:#fff;font-size:12px;line-height:1.5;padding:6px 12px;text-align:center}
+  #offlineBar.show{display:block}
+  body.offline{padding-top:30px}
+  .banner{display:none;align-items:center;gap:10px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.35);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+  .banner.show{display:flex}
+  .banner .who{flex:1}
+  .banner .who b{display:block}
+  .banner .who small{color:var(--dim);font-size:12px}
+  .empty{text-align:center;color:var(--dim);font-size:13px;padding:18px 0;line-height:1.8}
+  /* 三页并列 + 横向滑动切换（display 切换，避免超宽容器导致的高度串页） */
+  .deck{position:relative;overflow:hidden}
+  .page{display:none}
+  .page.on{display:block;animation:pageIn .26s cubic-bezier(.22,.61,.36,1)}
+  .page.on.back{animation-name:pageInBack}
+  @keyframes pageIn{from{opacity:.35;transform:translate3d(28px,0,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+  @keyframes pageInBack{from{opacity:.35;transform:translate3d(-28px,0,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+  .dots{display:flex;justify-content:center;gap:6px;padding:6px 0 0}
+  .dots i{width:6px;height:6px;border-radius:50%;background:var(--line);transition:all .25s}
+  .dots i.on{background:var(--accent);width:16px;border-radius:3px}
+  /* 档案卡 */
+  .pfgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .pfitem{background:var(--input);border:1px solid var(--line);border-radius:10px;padding:9px 11px;min-width:0}
+  .pfitem b{display:block;font-size:11px;color:var(--dim);font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pfitem span{font-size:15px;font-weight:500;word-break:break-all}
+  .pfitem.wide{grid-column:1 / -1}
+  .pfitem.warn{border-color:rgba(217,119,6,.45);background:rgba(217,119,6,.07)}
+  .pfitem.danger{border-color:rgba(220,38,38,.5);background:rgba(220,38,38,.07)}
+  .pfsearch{display:flex;gap:8px;margin-bottom:12px}
+  .pfsearch input{flex:1;min-width:0}
+  .pfsearch .btn{flex:0 0 auto;padding:0 16px;height:44px;line-height:44px;border-radius:10px}
+  .pfcand{display:flex;flex-direction:column;gap:8px}
+  .pfcand .cand{text-align:left;background:var(--input);border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--text);font:inherit;font-size:14px}
+  .pfcand .cand:active{border-color:var(--accent)}
+  .pfhead{display:flex;align-items:baseline;gap:8px;margin-bottom:12px}
+  .pfhead b{font-size:19px;font-weight:600}
+  .pfhead small{color:var(--dim);font-size:13px}
+</style>
+</head>
+<body>
+<div id="offlineBar"></div>
+<header>
+  <div class="hdrow">
+    <h1>谈心谈话</h1>
+    <div class="hdact">
+      <button class="theme icon" id="hdrRefresh" aria-label="刷新">↻</button>
+      <button class="theme icon" id="hdrUpdate" aria-label="检查更新" style="display:none">↑</button>
+      <button class="theme" id="themeBtn" aria-label="切换主题">深色</button>
+    </div>
+  </div>
+  <p class="sub" id="subBar"></p>
+  <div class="tabs" id="tabs">
+    <span class="seg-thumb" id="segThumb"></span>
+    <button class="tab on" data-tab="fill">填写</button>
+    <button class="tab" data-tab="profile">档案</button>
+    <button class="tab" data-tab="plan">名单 <span class="badge" id="planBadge" hidden>0</span></button>
+    <button class="tab" data-tab="focus">关注 <span class="badge" id="focusBadge" hidden>0</span></button>
+  </div>
+</header>
+
+<main>
+  <div class="deck" id="deck">
+    <div class="page on" id="pageFill" data-page="fill">
+          <div class="banner" id="planBanner">
+            <div class="who"><b id="pbName">—</b><small id="pbMeta"></small></div>
+            <button class="btn sm" id="pbBack">返回名单</button>
+          </div>
+
+
+
+    <section>
+      <h2>学生</h2>
+      <label class="f"><span>姓名 <b style="color:#ef4444">*</b></span>
+        <input id="xm" autocomplete="off">
+        <div class="hint">必填。若系统里重名，填学号或提交后手动指定</div>
+      </label>
+      <label class="f"><span>学号（选填）</span>
+        <input id="xh" inputmode="numeric" autocomplete="off">
+        <div class="hint">选填。填了可按学号精确锁定，避免重名错选</div>
+      </label>
+    </section>
+
+    <section>
+      <h2>谈话信息</h2>
+      <div class="row">
+        <label class="f"><span>日期</span><input id="thrq" type="date"></label>
+        <label class="f"><span>开始时间</span><input id="kssj" type="time"></label>
+      </div>
+      <div class="row">
+        <label class="f"><span>时长（分钟）</span><input id="thsc" inputmode="numeric" placeholder="20"></label>
+        <label class="f"><span>地点</span><input id="thdd" placeholder="104"></label>
+      </div>
+    </section>
+
+    <section>
+      <h2>分类</h2>
+      <div class="f"><span>谈话方式</span><div class="chips" data-single="fangshi"></div></div>
+      <div class="f"><span>发起人</span><div class="chips" data-single="famaoren"></div></div>
+      <div class="f"><span>社会工作</span><div class="chips" data-single="shegong"></div></div>
+      <div class="f"><span>谈话类别（可多选）</span><div class="chips" data-multi="leibie"></div></div>
+    </section>
+
+    <section>
+      <h2>内容</h2>
+      <label class="f"><span>关键词</span><input id="guanjianci" placeholder="学业压力 / 转专业咨询"></label>
+      <label class="f"><span>谈话要点 <em id="ydCount" style="font-size:12px;color:var(--dim);font-style:normal"></em></span><textarea id="yaodian" minlength="5" placeholder="学生反映的情况、你的回应（至少 5 字）"></textarea></label>
+      <label class="f"><span>谈话分析 <em id="fxCount" style="font-size:12px;color:var(--dim);font-style:normal"></em></span><textarea id="fenxi" minlength="5" placeholder="成因判断、后续打算（至少 5 字）"></textarea></label>
+    </section>
+
+    <section>
+      <h2>附件</h2>
+      <label class="f"><span>谈话录音 / 记录（选填）</span>
+        <input id="attachFile" type="file" accept=".md">
+        <div class="hint">选 .md 文件，服务器会自动转成 .docx 再上传（学工系统不接受 md）</div>
+      </label>
+      <div id="attachBox"></div>
+      <details id="attachLib" style="margin-top:12px">
+        <summary style="font-size:13px;color:var(--dim);cursor:pointer">服务器附件库 <span id="attachCount"></span></summary>
+        <div id="attachList"><div class="hint">加载中…</div></div>
+      </details>
+    </section>
+
+    <section>
+      <h2>结论</h2>
+      <div class="f"><span>辅导员自评</span><div class="chips" data-single="zipin"></div></div>
+      <div class="f"><span>是否需要跟踪</span><div class="chips" data-single="genzong"></div></div>
+    </section>
+
+    <section>
+      <h2>最近入队</h2>
+      <div class="list" id="recent">加载中…</div>
+    </section>
+        </div>
+    </div>
+    <div class="page" id="pageProfile" data-page="profile">
+          <section>
+            <h2>学生档案 <em id="pfCount"></em></h2>
+            <div class="pfsearch">
+              <input id="pfQuery" autocomplete="off" placeholder="姓名或学号">
+              <button class="btn sm primary" id="pfSearch">检索</button>
+              <button class="btn sm" id="pfClear" title="清空">清空</button>
+            </div>
+            <div id="profileBox"><div class="empty">输入姓名/学号后点「检索」<br><small style="color:var(--dim)">或从「名单」点学生自动带入</small></div></div>
+          </section>
+    </div>
+    <div class="page" id="pagePlan" data-page="plan">
+    <section>
+      <h2>添加名单 <em id="planStat"></em></h2>
+      <div class="row">
+        <label class="f"><span>姓名 <b style="color:#ef4444">*</b></span><input id="pXm" autocomplete="off" placeholder="张三"></label>
+        <label class="f"><span>学号</span><input id="pXh" inputmode="numeric" autocomplete="off" placeholder="选填"></label>
+      </div>
+      <div class="f"><span>班级 <b style="color:#ef4444">*</b></span><div class="chips" data-single="bj"></div></div>
+      <div class="row">
+        <label class="f"><span>日期</span><input id="pRq" type="date"></label>
+        <label class="f"><span>时间</span><input id="pSj" type="time"></label>
+      </div>
+      <label class="f"><span>地点</span><input id="pDd" placeholder="104"></label>
+      <button class="btn primary" id="pAdd" style="width:100%">添加到名单</button>
+      <div class="hint">添加后日期/时间/地点会保留，方便连续添加同一时段的多个学生</div>
+    </section>
+
+    <section>
+      <h2>本周名单 <em id="planProgress"></em></h2>
+      <div id="planList"><div class="empty">加载中…</div></div>
+    </section>
+
+    </div>
+    <div class="page" id="pageFocus" data-page="focus">
+    <section>
+      <h2>重点关注 <em id="focusMeta"></em></h2>
+      <div class="hint" id="focusPeriod" style="margin-bottom:2px"></div>
+      <div class="hint" style="margin-bottom:10px">按自然周（<b>双周一个周期</b>）考核，每个周期至少谈话 1 次；周期结束前 <span id="focusAhead">4</span> 天提醒。</div>
+      <div id="focusList"><div class="empty">加载中…</div></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" id="focusRefresh" style="flex:1">刷新</button>
+        <button class="btn primary" id="notifyBtn" style="flex:1">开启到期提醒</button>
+      </div>
+      <div class="hint" id="notifyState"></div>
+      <details id="logBox" style="margin-top:16px">
+        <summary style="font-size:13px;color:var(--dim);cursor:pointer">运行日志（各环节成功 / 失败）</summary>
+        <div id="logList" style="margin-top:10px;font-size:12px;line-height:1.6;max-height:340px;overflow:auto"></div>
+        <button class="btn ghost" id="logRefresh" style="width:100%;margin-top:8px">刷新日志</button>
+      </details>
+    </section>
+    </div>
+  </div>
+  <div class="dots" id="dots"><i class="on"></i><i></i><i></i><i></i></div>
+</main>
+
+<div class="bar" id="barFill">
+  <div class="grp" id="gFill" style="display:flex;gap:10px;width:100%">
+    <button class="btn primary" id="submit">预览并确认</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div class="overlay" id="editOv">
+  <div class="sheet">
+    <h3>修改谈话时间</h3>
+    <div id="editWho" style="font-size:13px;color:var(--dim);margin:-6px 0 12px"></div>
+    <div class="grp" style="gap:10px">
+      <label class="f" style="flex:1"><span>日期</span><input id="eRq" type="date"></label>
+      <label class="f" style="flex:1"><span>开始时间</span><input id="eSj" type="time"></label>
+    </div>
+    <label class="f"><span>地点</span><input id="eDd" placeholder="104"></label>
+    <div class="actions">
+      <button class="btn ghost" id="eCancel">取消</button>
+      <button class="btn primary" id="eSave">保存</button>
+    </div>
+    <button class="btn ghost" id="eFill" style="width:100%;margin-top:8px">不改了，直接去填写</button>
+  </div>
+</div>
+
+<div class="overlay" id="ov">
+  <div class="sheet">
+    <h3>确认信息</h3>
+    <div id="review"></div>
+    <div class="actions">
+      <button class="btn ghost" id="back">返回修改</button>
+      <button class="btn primary" id="confirm">确认入队</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ENUMS = __ENUMS__;
+const DRAFT_KEY = 'talk_draft_v2';
+const state = { leibie: [] };
+let currentPlan = null;   // { id, xm, xh, thrq, kssj, thdd }
+let attachment = null;    // { id, name, path, size }
+let planCache = [];
+
+/* ---------- 本地时间（不要用 toISOString，那是 UTC） ---------- */
+function p2(n) { return String(n).padStart(2, '0'); }
+function localYmd(d) { d = d || new Date(); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+function fmtClock(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds());
+}
+function fmtShort(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
+}
+
+/* ---------- 离线支持 ---------- */
+const OFFLINE_QUEUE = 'talk_offline_queue';
+const CACHE_PREFIX = 'talkcache:';
+let offlineAt = 0;
+
+function cacheSet(key, data) {
+  try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ at: Date.now(), data: data })); } catch (e) {}
+}
+function cacheGet(key) {
+  try { const r = localStorage.getItem(CACHE_PREFIX + key); return r ? JSON.parse(r) : null; } catch (e) { return null; }
+}
+function offlineQueue() {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE) || '[]'); } catch (e) { return []; }
+}
+function offlineQueueSet(a) {
+  try { localStorage.setItem(OFFLINE_QUEUE, JSON.stringify(a)); } catch (e) {}
+}
+
+function fmtHM(ts) {
+  const d = new Date(ts);
+  const p = function (n) { return String(n).padStart(2, '0'); };
+  return p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function setOffline(on, at) {
+  offlineAt = on ? (at || offlineAt || Date.now()) : 0;
+  const bar = $('offlineBar');
+  if (!bar) return;
+  if (on) {
+    const n = pendingCount();
+    bar.textContent = '离线模式 · 数据截至 ' + (offlineAt ? fmtHM(offlineAt) : '—') + (n ? ' · ' + n + ' 条待同步' : '');
+    bar.classList.add('show');
+    document.body.classList.add('offline');
+  } else {
+    bar.classList.remove('show');
+    document.body.classList.remove('offline');
+  }
+}
+
+const OFFLINE_OPS = 'talk_offline_ops';
+function opsQueue() { try { return JSON.parse(localStorage.getItem(OFFLINE_OPS) || '[]'); } catch (e) { return []; } }
+function opsQueueSet(a) { try { localStorage.setItem(OFFLINE_OPS, JSON.stringify(a)); } catch (e) {} }
+function pendingCount() { return offlineQueue().length + opsQueue().length; }
+
+// 写接口：网络失败时入队，联网后按顺序补发
+async function apiWrite(url, opts, label) {
+  try {
+    const r = await fetch(url, opts);
+    if (!r.ok) {
+      let msg = 'HTTP ' + r.status;
+      try { const d = await r.json(); msg = (d.errors || [d.error || msg]).join('；'); } catch (e) {}
+      const err = new Error(msg);
+      err.__http = true;
+      throw err;
+    }
+    try { return await r.json(); } catch (e) { return { ok: true }; }
+  } catch (e) {
+    if (e && e.__http) throw e;      // 业务错误直接抛出，不排队
+    const arr = opsQueue();
+    arr.push({ at: Date.now(), url: url, opts: opts || {}, label: label || '' });
+    opsQueueSet(arr);
+    setOffline(true, Date.now());
+    return { ok: true, queued: true };
+  }
+}
+
+async function flushOps() {
+  const arr = opsQueue();
+  if (!arr.length || !navigator.onLine) return;
+  const left = [];
+  for (let i = 0; i < arr.length; i++) {
+    const op = arr[i];
+    try {
+      const r = await fetch(op.url, op.opts);
+      if (!r.ok) { console.warn('离线操作被服务器拒绝，丢弃', op.url, r.status); }
+    } catch (e) {
+      left.push(op);
+      for (let j = i + 1; j < arr.length; j++) left.push(arr[j]);
+      break;
+    }
+  }
+  opsQueueSet(left);
+  if (left.length < arr.length) {
+    toast('已同步 ' + (arr.length - left.length) + ' 条离线操作');
+    loadPlan();
+    if (offlineQueue().length === 0 && left.length === 0) setOffline(false);
+  }
+}
+
+// 读接口：在线时刷新缓存，离线时回退到上次快照
+async function apiGet(url, opts) {
+  try {
+    const r = await fetch(url, Object.assign({ cache: 'no-store' }, opts || {}));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    cacheSet(url, d);
+    if (offlineAt) setOffline(false);
+    return d;
+  } catch (e) {
+    const c = cacheGet(url);
+    if (c) { setOffline(true, c.at); return c.data; }
+    setOffline(true);
+    throw e;
+  }
+}
+const $ = function (id) { return document.getElementById(id); };
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+  });
+}
+
+function toast(msg, ms) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(function () { t.classList.remove('show'); }, ms || 2600);
+}
+
+/* ---------- 页签 ---------- */
+const PAGE_ORDER = ['fill', 'profile', 'plan', 'focus'];
+const PAGE_EL = { fill: 'pageFill', profile: 'pageProfile', plan: 'pagePlan', focus: 'pageFocus' };
+let curPage = 'fill';
+let switching = false;
+
+function switchPage(name, dir) {
+  if (PAGE_ORDER.indexOf(name) < 0) name = 'fill';
+  if (switching || name === curPage) return;   // 动画期间忽略重复触发，避免叠加抖动
+  switching = true;
+  setTimeout(function () { switching = false; }, 280);
+  const i = PAGE_ORDER.indexOf(name);
+  window.scrollTo(0, 0);   // 先回顶，再换页（否则页面变短时浏览器强制钳制滚动位置，产生跳动）
+  PAGE_ORDER.forEach(function (k) {
+    const el = $(PAGE_EL[k]);
+    if (!el) return;
+    if (k === name) {
+      el.classList.add('on');
+      el.classList.toggle('back', dir < 0);
+    } else {
+      el.classList.remove('on');
+    }
+  });
+  document.querySelectorAll('.tab').forEach(function (b) {
+    b.classList.toggle('on', b.dataset.tab === name);
+  });
+  const thumb = $('segThumb');
+  if (thumb) thumb.style.transform = 'translateX(' + (i * 100) + '%)';
+  $('barFill').style.display = name === 'fill' ? 'flex' : 'none';   // 档案/名单页不显示底部按钮
+  document.body.style.paddingBottom = name === 'fill' ? '104px' : '0';
+  const dots = $('dots').children;
+  for (let k = 0; k < dots.length; k++) dots[k].classList.toggle('on', k === i);
+  if (name === 'plan') loadPlan();
+  if (name === 'focus') loadFocus();
+  curPage = name;
+}
+
+function switchTab(n) { switchPage(n, 1); }
+function gotoPane(n) { switchPage(n, 1); }
+
+document.querySelectorAll('.tab').forEach(function (b) {
+  b.addEventListener('click', function () {
+    const from = PAGE_ORDER.indexOf(curPage);
+    const to = PAGE_ORDER.indexOf(b.dataset.tab);
+    switchPage(b.dataset.tab, to >= from ? 1 : -1);
+  });
+});
+
+/* ---------- 表单 ---------- */
+function chip(container, label, onPick, on) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'chip' + (on ? ' on' : '');
+  b.textContent = label;
+  b.addEventListener('click', function () { onPick(b); });
+  container.appendChild(b);
+}
+
+function buildChips() {
+  document.querySelectorAll('[data-single]').forEach(function (box) {
+    const key = box.dataset.single;
+    box.innerHTML = '';
+    ENUMS[key].forEach(function (v) {
+      chip(box, v, function (btn) {
+        state[key] = v;
+        box.querySelectorAll('.chip').forEach(function (x) { x.classList.remove('on'); });
+        btn.classList.add('on');
+        saveDraft();
+      }, state[key] === v);
+    });
+  });
+  document.querySelectorAll('[data-multi]').forEach(function (box) {
+    const key = box.dataset.multi;
+    if (!Array.isArray(state[key])) state[key] = [];
+    box.innerHTML = '';
+    ENUMS[key].forEach(function (v) {
+      chip(box, v, function (btn) {
+        const i = state[key].indexOf(v);
+        if (i >= 0) { state[key].splice(i, 1); btn.classList.remove('on'); }
+        else { state[key].push(v); btn.classList.add('on'); }
+        saveDraft();
+      }, state[key].indexOf(v) >= 0);
+    });
+  });
+}
+
+// 从关注名单带入班级：命中预设 chip 就选中，没命中就补一个 chip
+function pickBj(v) {
+  if (!v) return;
+  const box = document.querySelector('[data-single="bj"]');
+  if (!box) return;
+  let hit = null;
+  box.querySelectorAll('.chip').forEach(function (c) {
+    if ((c.textContent || '').trim() === v) hit = c;
+  });
+  if (!hit) {
+    chip(box, v, function (btn) {
+      state.bj = v;
+      box.querySelectorAll('.chip').forEach(function (x) { x.classList.remove('on'); });
+      btn.classList.add('on');
+      saveDraft();
+    }, false);
+    hit = box.lastElementChild;
+  }
+  box.querySelectorAll('.chip').forEach(function (x) { x.classList.remove('on'); });
+  hit.classList.add('on');
+  state.bj = v;
+  saveDraft();
+}
+
+const TEXT_FIELDS = ['xh', 'xm', 'thrq', 'kssj', 'thsc', 'thdd', 'guanjianci', 'yaodian', 'fenxi'];
+
+function collect() {
+  const o = { leibie: state.leibie.slice() };
+  ['fangshi', 'famaoren', 'shegong', 'zipin', 'genzong'].forEach(function (k) { o[k] = state[k] || ''; });
+  TEXT_FIELDS.forEach(function (k) { o[k] = ($(k).value || '').trim(); });
+  // 地点不填时按 104 提交；只补数据，不回填输入框
+  if (!o.thdd) o.thdd = '104';
+  if (attachment) o.attachment = attachment;
+  return o;
+}
+
+async function loadAttachLib() {
+  const box = $('attachList');
+  if (!box) return;
+  try {
+    const d = await apiGet('/api/attachments');
+    const items = (d.items || []).slice(0, 12);
+    $('attachCount').textContent = items.length ? '(' + items.length + ')' : '(空)';
+    if (!items.length) { box.innerHTML = '<div class="hint">还没有上传过附件</div>'; return; }
+    box.innerHTML = items.map(function (it, i) {
+      const kb = Math.round((it.size || 0) / 1024);
+      const dt = (it.at || '').slice(5, 16).replace('T', ' ');
+      return '<div class="attach-chip" style="width:100%;justify-content:space-between">' +
+        '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(it.name) + '</span>' +
+        '<small style="color:var(--dim);flex:0 0 auto">' + kb + 'KB · ' + dt + '</small>' +
+        '<button type="button" data-use="' + i + '" style="color:var(--accent)">选用</button>' +
+        '<button type="button" data-del="' + i + '">×</button></div>';
+    }).join('');
+    box.querySelectorAll('[data-use]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        const it = items[Number(b.dataset.use)];
+        attachment = { id: it.id, name: it.name, path: it.path, size: it.size };
+        renderAttach(); saveDraft();
+        toast('已选用：' + it.name);
+      });
+    });
+    box.querySelectorAll('[data-del]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        const it = items[Number(b.dataset.del)];
+        if (!confirm('删除附件「' + it.name + '」？')) return;
+        await fetch('/api/attachments/' + encodeURIComponent(it.id), { method: 'DELETE' });
+        loadAttachLib();
+      });
+    });
+  } catch (e) {
+    box.innerHTML = '<div class="hint err">读取失败</div>';
+  }
+}
+
+function renderAttach() {
+  const box = $('attachBox');
+  if (!attachment) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="attach-chip"><b>' + escapeHtml(attachment.name) + '</b>' +
+    '<span>' + Math.round((attachment.size || 0) / 1024) + ' KB</span>' +
+    '<button type="button" id="attachDel">×</button></div>';
+  $('attachDel').addEventListener('click', function () {
+    attachment = null;
+    renderAttach();
+    saveDraft();
+  });
+}
+
+$('attachLib').addEventListener('toggle', function () {
+  if ($('attachLib').open) loadAttachLib();
+});
+
+$('attachFile').addEventListener('change', async function (e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  $('attachBox').innerHTML = '<div class="hint">上传中… ' + escapeHtml(file.name) + '</div>';
+  try {
+    const r = await fetch('/api/attach?name=' + encodeURIComponent(file.name), { method: 'POST', body: file });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || '上传失败');
+    attachment = d;
+    if (d.convertedFrom) toast('已转成 docx：' + d.name, 3000);
+    renderAttach();
+    saveDraft();
+    toast('附件已上传');
+  } catch (err) {
+    attachment = null;
+    $('attachBox').innerHTML = '<div class="hint err">上传失败：' + escapeHtml(err.message) + '</div>';
+  }
+  e.target.value = '';
+});
+
+function saveDraft() {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(collect())); } catch (e) {}
+}
+
+function loadDraft() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) {}
+  if (!d) return;
+  TEXT_FIELDS.forEach(function (k) { if (d[k]) $(k).value = d[k]; });
+  ['fangshi', 'famaoren', 'shegong', 'zipin', 'genzong'].forEach(function (k) { if (d[k]) state[k] = d[k]; });
+  if (Array.isArray(d.leibie)) state.leibie = d.leibie.slice();
+  if (d.attachment) { attachment = d.attachment; renderAttach(); }
+}
+
+const LABELS = [
+  ['thrq', '日期'], ['kssj', '时间'],
+  ['thsc', '时长(分)'], ['thdd', '地点'], ['fangshi', '方式'], ['famaoren', '发起人'],
+  ['shegong', '社会工作'], ['leibie', '类别'], ['guanjianci', '关键词'],
+  ['yaodian', '要点'], ['fenxi', '分析'], ['zipin', '自评'], ['genzong', '跟踪'],
+];
+
+function reviewHtml(o) {
+  let html = LABELS.map(function (p) {
+    let v = o[p[0]];
+    if (Array.isArray(v)) v = v.join('、');
+    v = v || '—';
+    return '<div class="kv"><b>' + p[1] + '</b><span>' + escapeHtml(v) + '</span></div>';
+  }).join('');
+  if (o.attachment) {
+    html += '<div class="kv"><b>附件</b><span>' + escapeHtml(o.attachment.name) + '</span></div>';
+  }
+  return html;
+}
+
+function initDefaults() {
+  const now = new Date();
+  if (!$('thrq').value) $('thrq').value = localYmd(now);
+  if (!$('kssj').value) {
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    $('kssj').value = hh + ':' + mm;
+  }
+  if (!$('pRq').value) $('pRq').value = localYmd(now);
+  if (!$('pSj').value) $('pSj').value = '10:00';
+}
+
+async function refreshRecent() {
+  try {
+    const d = await apiGet('/api/items');
+    const el = $('recent');
+    if (!d.items || !d.items.length) { el.textContent = '还没有记录'; return; }
+    el.innerHTML = '';
+    d.items.slice(0, 6).forEach(function (it) {
+      const st = it.status === 'submitted' ? '✓' : it.status === 'failed' ? '✗' : '…';
+      const div = document.createElement('div');
+      div.textContent = st + '  ' + fmtShort(it.createdAt) + '  ' + (it.xm || '') +
+        (it.xh ? ' · ' + it.xh : '') + ' · ' + (it.leibie || []).join('/');
+      if (it.status === 'failed') div.className = 'err';
+      el.appendChild(div);
+    });
+  } catch (e) { $('recent').textContent = '读取失败'; }
+}
+
+TEXT_FIELDS.forEach(function (id) {
+  const el = $(id);
+  if (el) el.addEventListener('input', saveDraft);
+});
+
+// 要点/分析字数实时显示（学工下限 5 字）
+(function bindCounts() {
+  const map = [['yaodian', 'ydCount'], ['fenxi', 'fxCount']];
+  map.forEach(function (p) {
+    const el = $(p[0]), out = $(p[1]);
+    if (!el || !out) return;
+    const upd = function () {
+      const n = (el.value || '').trim().length;
+      out.textContent = n < 5 ? n + ' 字（至少 5 字）' : n + ' 字';
+      out.style.color = n < 5 ? '#ef4444' : 'var(--dim)';
+    };
+    el.addEventListener('input', upd);
+    upd();
+  });
+})();
+
+/* ---------- 提交 ---------- */
+$('submit').addEventListener('click', function () {
+  const o = collect();
+  if (!o.xm) return toast('请填写姓名');
+  if (o.xh && !/^[0-9]{6,14}$/.test(o.xh)) return toast('学号填了就要是 6–14 位数字');
+  if (!o.thrq || !o.kssj) return toast('请填写日期和时间');
+  if (!o.thsc || Number(o.thsc) <= 0) return toast('请填写有效时长');
+  // 学工系统要求：谈话要点 / 谈话分析 至少 5 个字（2026-11-05 截图确认）
+  if ((o.yaodian || '').length < 5) return toast('谈话要点至少 5 个字（现在 ' + (o.yaodian || '').length + ' 个）');
+  if ((o.fenxi || '').length < 5) return toast('谈话分析至少 5 个字（现在 ' + (o.fenxi || '').length + ' 个）');
+  if (!o.fangshi || !o.famaoren || !o.zipin || !o.genzong) return toast('请完成分类与结论的四组选择');
+  if (!o.leibie.length) return toast('至少选择一个谈话类别');
+  $('review').innerHTML = reviewHtml(o);
+  document.querySelector('#ov h3').textContent = '确认信息 · ' + o.xm + (o.xh ? '（' + o.xh + '）' : '');
+  $('ov').classList.add('show');
+});
+
+$('back').addEventListener('click', function () { $('ov').classList.remove('show'); });
+
+$('confirm').addEventListener('click', async function () {
+  const o = collect();
+  $('confirm').disabled = true;
+  $('confirm').textContent = '提交中…';
+  try {
+    const r = await fetch('/api/submit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(o),
+    });
+    const d = await r.json();
+    if (!d.ok) {
+      toast((d.errors || [d.error || '提交失败']).join('；'), 4000);
+    } else {
+      $('ov').classList.remove('show');
+      // 若来自名单，标记已完成
+      if (currentPlan) {
+        try {
+          await apiWrite('/api/plan/done', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ id: currentPlan.id, queueId: d.id }),
+          }, '标记已谈');
+        } catch (e) {}
+      }
+      localStorage.removeItem(DRAFT_KEY);
+      clearForm();
+      currentPlan = null;
+      $('planBanner').classList.remove('show');
+      toast('已入队 · ' + d.id);
+      pushCalendarReminder();
+      switchTab('plan');
+      refreshRecent();
+    }
+  } catch (e) {
+    // 网络失败：离线保存，联网后自动补交
+    saveOfflineSubmission(o);
+  } finally {
+    $('confirm').disabled = false;
+    $('confirm').textContent = '确认入队';
+  }
+});
+
+function saveOfflineSubmission(o) {
+  const arr = offlineQueue();
+  arr.push({ at: Date.now(), rec: o, planId: currentPlan ? currentPlan.id : null });
+  offlineQueueSet(arr);
+  setOffline(true, Date.now());
+  $('ov').classList.remove('show');
+  localStorage.removeItem(DRAFT_KEY);
+  clearForm();
+  currentPlan = null;
+  $('planBanner').classList.remove('show');
+  toast('离线已保存，联网后自动提交（共 ' + arr.length + ' 条）', 4000);
+  pushCalendarReminder();
+}
+
+let flushing = false;
+async function flushOffline() {
+  const arr = offlineQueue();
+  if (!arr.length || flushing) return;
+  flushing = true;
+  const left = [];
+  let ok = 0;
+  for (let i = 0; i < arr.length; i++) {
+    const it = arr[i];
+    try {
+      const r = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(it.rec),
+      });
+      const d = await r.json();
+      if (!d.ok) throw new Error((d.errors || [d.error || 'fail']).join('；'));
+      ok++;
+      if (it.planId) {
+        try {
+          await apiWrite('/api/plan/done', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: it.planId, queueId: d.id }) }, '标记已谈');
+        } catch (e) {}
+      }
+    } catch (e) {
+      left.push(it);
+    }
+  }
+  offlineQueueSet(left);
+  flushing = false;
+  if (ok) {
+    toast('离线记录已补交 ' + ok + ' 条', 4000);
+    setOffline(left.length > 0);
+    refreshRecent(); loadPlan();
+  }
+}
+
+window.addEventListener('online', function () { flushOffline(); flushOps(); });
+setTimeout(function () { if (navigator.onLine !== false) { flushOffline(); flushOps(); } }, 2500);
+if (navigator.onLine === false) setOffline(true, Date.now());
+
+function clearForm() {
+  attachment = null;
+  if ($('attachBox')) $('attachBox').innerHTML = '';
+  TEXT_FIELDS.forEach(function (k) { if ($(k)) $(k).value = ''; });
+  ['fangshi', 'famaoren', 'shegong', 'zipin', 'genzong'].forEach(function (k) { state[k] = ''; });
+  state.leibie = [];
+  buildChips();
+  initDefaults();
+}
+
+if ($('clear')) {
+  $('clear').addEventListener('click', function () {
+    if (!confirm('清空当前填写内容？')) return;
+    localStorage.removeItem(DRAFT_KEY);
+    clearForm();
+    currentPlan = null;
+    $('planBanner').classList.remove('show');
+  });
+}
+
+/* ---------- 名单 ---------- */
+function fmtDate(d) {
+  if (!d) return '未定日期';
+  const dt = new Date(d + 'T00:00:00');
+  const w = ['日', '一', '二', '三', '四', '五', '六'][dt.getDay()];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((dt - today) / 86400000);
+  let pre = '';
+  if (diff === 0) pre = '今天 · ';
+  else if (diff === 1) pre = '明天 · ';
+  else if (diff === -1) pre = '昨天 · ';
+  return pre + (dt.getMonth() + 1) + '月' + dt.getDate() + '日 周' + w;
+}
+
+/* ---------- 重点关注（14 天周期） ---------- */
+let focusData = null;
+
+function focusBadge(r) {
+  if (r.status === 'done') return { txt: '已谈', cls: 'ok' };
+  if (r.status === 'urgent') return { txt: '未谈 · 紧迫', cls: 'err' };
+  if (r.status === 'pending') return { txt: '未谈', cls: 'warn' };
+  return { txt: '已撤销', cls: '' };
+}
+
+function focusLeftText(r) {
+  if (r.status === 'inactive') return '—';
+  if (r.status === 'done') return '已谈';
+  if (r.daysLeft == null) return '—';
+  if (r.daysLeft === 0) return '今天截止';
+  return '剩 ' + r.daysLeft + ' 天';
+}
+
+function renderFocus() {
+  const box = $('focusList');
+  const rows = (focusData && focusData.rows) || [];
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty">还没有数据，点下面「刷新」读一次学工系统</div>';
+    $('focusMeta').textContent = '';
+    return;
+  }
+  if (!rows.filter(function (r) { return r.status !== 'inactive'; }).length) {
+    box.innerHTML = '<div class="empty">当前没有「关注中」的学生</div>';
+  }
+  const active = rows.filter(function (r) { return r.status !== 'inactive'; });
+  const doneN = active.filter(function (r) { return r.status === 'done'; }).length;
+  const pending = active.length - doneN;
+  const p = focusData && focusData.period;
+  if ($('focusPeriod')) {
+    $('focusPeriod').innerHTML = p
+      ? '本轮 <b>' + p.start + ' ~ ' + p.end + '</b>，' + (p.daysLeft === 0 ? '今天截止' : '还剩 ' + p.daysLeft + ' 天')
+      : '';
+  }
+  $('focusMeta').textContent = '已谈 ' + doneN + '/' + active.length;
+  const badge = $('focusBadge');
+  if (badge) { badge.hidden = pending === 0; badge.textContent = pending; }
+
+  renderSub();
+  // 已撤销关注的不展示（只留关注中的）
+  box.innerHTML = active.map(function (r) {
+    const b = focusBadge(r);
+    const off = r.status === 'inactive';
+    const line1 = [r.xh, r.cls].filter(Boolean).join(' · ');
+    const line2 = '本周期 ' + (r.talksThis || 0) + ' 次 · 上次 ' + (r.lastTalk ? r.lastTalk.slice(5) : '—');
+    return '<div class="item' + (off ? ' done' : '') + '">' +
+      '<div class="time" style="flex:0 0 52px;' + (off ? '' : 'color:' + (r.status === 'overdue' ? '#ef4444' : 'var(--accent)')) + '">' + focusLeftText(r) + '</div>' +
+      '<div class="who"><b>' + escapeHtml(r.name) + (r.status === 'done' ? '' : ' <span class="pill ' + b.cls + '">' + b.txt + '</span>') + '</b>' +
+      '<small><span>' + escapeHtml(line1) + '</span><span>' + escapeHtml(line2) + '</span></small></div>' +
+      '<div class="act">' + (off ? '' : '<button class="btn sm" data-sched="' + escapeHtml(r.name) + '|' + escapeHtml(r.xh) + '|' + escapeHtml(r.cls || '') + '">安排</button>') + '</div>' +
+      '</div>';
+  }).join('');
+
+  box.querySelectorAll('[data-sched]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const p = btn.dataset.sched.split('|');
+      switchPage('plan', -1);
+      $('pXm').value = p[0] || '';
+      $('pXh').value = p[1] || '';
+      pickBj((p[2] || '').trim());
+      $('pRq').scrollIntoView({ block: 'center' });
+      setTimeout(function () { $('pRq').focus(); }, 300);
+      toast('已带入姓名/班级/学号，选个时间再点「添加到名单」');
+    });
+  });
+}
+
+async function loadFocus(force) {
+  const box = $('focusList');
+  if (force) {
+    box.innerHTML = '<div class="empty">正在读学工系统，约 20 秒…</div>';
+    try {
+      const r = await fetch('/api/focus/refresh', { method: 'POST' });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || '刷新失败');
+      focusData = d.data;
+    } catch (e) {
+      box.innerHTML = '<div class="empty err">' + escapeHtml(e.message) + '</div>';
+      return;
+    }
+  } else {
+    try {
+      const d = await apiGet('/api/focus');
+      focusData = d.data;
+      if (d.ahead) $('focusAhead').textContent = d.ahead;
+    } catch (e) {}
+  }
+  renderFocus();
+}
+
+/* ---------- 到期提醒（Web Push） ---------- */
+function b64ToU8(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const s = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(s);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function setNotifyState(txt, cls) {
+  const el = $('notifyState');
+  el.textContent = txt || '';
+  el.className = 'hint' + (cls ? ' ' + cls : '');
+}
+
+async function refreshNotifyState() {
+  if (!window.isSecureContext) {
+    $('notifyBtn').textContent = '需用 HTTPS 打开';
+    setNotifyState('通知只能在 https:// 下开启，请用你的 HTTPS 地址访问', 'err');
+    return;
+  }
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+    $('notifyBtn').textContent = '浏览器不支持';
+    setNotifyState('这个浏览器不支持通知', 'err');
+    return;
+  }
+  const perm = Notification.permission;
+  if (perm === 'denied') {
+    $('notifyBtn').textContent = '通知被禁用';
+    setNotifyState('在浏览器站点设置里允许通知后再试', 'err');
+    return;
+  }
+  try {
+    const info = await (await fetch('/api/push/key', { cache: 'no-store' })).json();
+    if (info.ahead) $('focusAhead').textContent = info.ahead;
+    const reg = await navigator.serviceWorker.ready;
+    let sub = null;
+    try { sub = await reg.pushManager.getSubscription(); } catch (e) {}
+    let periodic = false;
+    try { const t = await reg.periodicSync.getTags(); periodic = t.indexOf('focus-check') >= 0; } catch (e) {}
+
+    if (perm === 'granted') {
+      let host = '';
+      try { if (sub) host = new URL(sub.endpoint).host; } catch (e) {}
+      $('notifyBtn').textContent = '发送测试提醒';
+      if (host) setNotifyState('已开启 · 推送 ' + host + (periodic ? ' · 后台每 6 小时' : ''));
+      else setNotifyState('已开启本地提醒' + (periodic ? ' · 后台约 6 小时检查一次' : ' · 仅打开页面时提醒'));
+    } else {
+      $('notifyBtn').textContent = '开启到期提醒';
+      setNotifyState('开启后，本周期快到期时会提醒（本地通知，不依赖推送服务）');
+    }
+  } catch (e) {
+    setNotifyState('读取推送配置失败', 'err');
+  }
+}
+
+// 本地提醒：直接让 Service Worker 弹通知（本地渲染，不走 FCM）
+async function localNotify(opts, force) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+  try {
+    const d = await apiGet('/api/focus/brief');
+    if (!d.ok || !d.need) return false;
+    const key = d.period + '|' + d.need + '|' + d.text;
+    if (!force && localStorage.getItem('talk_notified') === key) return false;
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification('重点关注 · ' + d.need + ' 人本周期未谈', {
+      body: (d.text || '') + (d.period ? '（' + d.period + ' 截止）' : ''),
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'focus-local',
+      renotify: true,
+      data: { url: '/#focus' }
+    });
+    localStorage.setItem('talk_notified', key);
+    return true;
+  } catch (e) { return false; }
+}
+
+// 后台定期检查（Android Chrome 支持，需要装成 PWA）
+async function registerPeriodicSync() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if (!('periodicSync' in reg)) return false;
+    try {
+      const st = await navigator.permissions.query({ name: 'periodic-background-sync' });
+      if (st.state === 'denied') return false;
+    } catch (e) {}
+    await reg.periodicSync.register('focus-check', { minInterval: 6 * 3600 * 1000 });
+    return true;
+  } catch (e) { return false; }
+}
+
+async function enableNotify() {
+  if (!window.isSecureContext) return alert('通知需要 HTTPS 地址打开，例如 https://你的域名/?k=...');
+  setNotifyState('正在申请通知权限…');
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { setNotifyState('未授权通知（权限=' + perm + '）', 'err'); return; }
+
+  const reg = await navigator.serviceWorker.ready;
+
+  // ① 先注册后台定期检查（不依赖 FCM）
+  const periodic = await registerPeriodicSync();
+
+  // ② 再尝试真推送（国内多半失败，失败也不影响本地提醒）
+  let pushHost = '';
+  try {
+    const info = await (await fetch('/api/push/key', { cache: 'no-store' })).json();
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(info.key) });
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ endpoint: sub.endpoint, keys: sub.toJSON().keys, ua: navigator.userAgent })
+    });
+    pushHost = new URL(sub.endpoint).host;
+  } catch (e) {
+    pushHost = '';
+  }
+
+  // ③ 立刻弹一条，验证本地通知能显示
+  const shown = await localNotify(null, true);
+  localStorage.setItem('talk_notify_mode', pushHost ? 'push' : 'local');
+
+  if (pushHost) setNotifyState('已开启 · 推送通道 ' + pushHost + (periodic ? ' + 后台定期检查' : ''));
+  else setNotifyState('已开启本地提醒' + (periodic ? ' · 后台约 6 小时检查一次' : '（推送不可用，只在打开页面时提醒）'), periodic ? '' : 'warn');
+  if (shown) toast('已开启，刚才那条就是提醒样例');
+  else toast(pushHost ? '已开启推送' : '已开启本地提醒');
+  refreshNotifyState();
+}
+
+async function loadLogs() {
+  const box = $('logList');
+  if (!box) return;
+  box.textContent = '加载中…';
+  try {
+    const d = await apiGet('/api/logs?limit=80');
+    const items = (d && d.items) || [];
+    if (!items.length) { box.innerHTML = '<div class="hint">还没有日志</div>'; return; }
+    box.innerHTML = items.map(function (it) {
+      const t = it.tl ? it.tl.slice(11, 19) : fmtClock(it.t);
+      const mark = it.ok ? '<span style="color:var(--ok)">✓</span>' : '<span style="color:#ef4444">✗</span>';
+      return '<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)">' +
+        '<span style="flex:0 0 50px;color:var(--dim);font-variant-numeric:tabular-nums">' + t + '</span>' +
+        '<span style="flex:0 0 12px">' + mark + '</span>' +
+        '<span style="flex:0 0 84px;color:var(--text)">' + escapeHtml(it.stage || '') + '</span>' +
+        '<span style="flex:1;min-width:0;color:var(--dim);word-break:break-all">' + escapeHtml(it.detail || '') + '</span></div>';
+    }).join('');
+  } catch (e) {
+    box.innerHTML = '<div class="hint err">读取失败</div>';
+  }
+}
+
+$('logBox').addEventListener('toggle', function () { if ($('logBox').open) loadLogs(); });
+$('logRefresh').addEventListener('click', function () { loadLogs(); });
+
+$('hdrRefresh').addEventListener('click', function () { location.reload(); });
+
+// 只在 App 里显示（网页/浏览器没有 TalkNative）
+window.addEventListener('load', function () {
+  try {
+    if (window.TalkNative && typeof TalkNative.checkUpdate === 'function') {
+      const b = $('hdrUpdate');
+      if (b) { b.style.display = ''; b.addEventListener('click', function () { TalkNative.checkUpdate(); }); }
+    }
+  } catch (e) {}
+});
+
+$('focusRefresh').addEventListener('click', function () { loadFocus(true); });
+
+$('notifyBtn').addEventListener('click', async function () {
+  const btn = $('notifyBtn');
+  btn.disabled = true;
+  try {
+    if (btn.textContent === '发送测试提醒') {
+      const shown = await localNotify(null, true);
+      toast(shown ? '已弹出测试提醒' : '没有待提醒的项，或通知权限未开');
+    } else await enableNotify();
+  } catch (e) {
+    toast('失败：' + e.message);
+  }
+  btn.disabled = false;
+});
+
+/* ---------- 实时事件流（页面开着时秒级提醒） ---------- */
+let alertEs = null;
+function startAlertStream() {
+  if (!window.EventSource) return;
+  try {
+    alertEs = new EventSource('/api/alerts/stream');
+    alertEs.addEventListener('alert', async function (ev) {
+      let d = {};
+      try { d = JSON.parse(ev.data); } catch (e) {}
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(d.title || '重点关注', {
+          body: d.body || '',
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: 'focus-alert',
+          renotify: true,
+          data: { url: d.url || '/#focus' }
+        });
+      } catch (e) {
+        if (window.Notification && Notification.permission === 'granted') {
+          try { new Notification(d.title || '重点关注', { body: d.body || '' }); } catch (e2) {}
+        }
+      }
+      loadFocus();
+    });
+    alertEs.onerror = function () { /* 浏览器会自动重连 */ };
+  } catch (e) {}
+}
+
+// 每天 18:00 的日历提醒（App 内才有 TalkNative）
+let calTimer = null;
+async function pushCalendarReminder() {
+  if (!window.TalkNative || typeof TalkNative.syncDaily !== 'function') return;
+  try {
+    // 拉最新数据，避免用缓存的旧名单
+    const plan = await apiGet('/api/plan');
+    const focus = await apiGet('/api/focus');
+    const tomorrow = localYmd(new Date(Date.now() + 86400000));
+    const plans = (plan.items || []).filter(function (x) { return x.status !== 'done' && x.thrq === tomorrow; })
+      .sort(function (a, b) { return (a.thrq + a.kssj).localeCompare(b.thrq + b.kssj); });
+    const rows = ((focus.data && focus.data.rows) || []).filter(function (r) {
+      return r.status !== 'inactive' && r.status !== 'done';
+    });
+
+    const lines = [];
+    if (plans.length) {
+      lines.push('明天 ' + plans.length + ' 场谈话：');
+      plans.forEach(function (p) {
+        lines.push('· ' + (p.kssj || '') + ' ' + p.xm + (p.bj ? '（' + p.bj + '）' : ''));
+      });
+    } else {
+      lines.push('明天没有排谈话');
+    }
+    if (rows.length) {
+      lines.push('');
+      lines.push('重点关注还有 ' + rows.length + ' 人本周期未录入：');
+      rows.slice(0, 8).forEach(function (r) {
+        lines.push('· ' + r.name + (r.daysLeft === 0 ? ' 今天截止' : ' 剩 ' + r.daysLeft + ' 天'));
+      });
+    }
+
+    const title = '谈心提醒 · 明天 ' + plans.length + ' 场' +
+      (rows.length ? ' · 关注 ' + rows.length + ' 人未录' : '');
+    TalkNative.syncDaily(title, lines.join('\n'));
+  } catch (e) {}
+}
+
+// 副标题：从"操作说明"改成"状态摘要"
+function renderSub() {
+  const el = $('subBar');
+  if (!el) return;
+
+  if (localStorage.getItem('talk_swipe_hint') !== '1') {
+    el.innerHTML = '<span>← 左右滑动切换页面 →</span>';
+    setTimeout(function () {
+      try { localStorage.setItem('talk_swipe_hint', '1'); } catch (e) {}
+      renderSub();
+    }, 4000);
+    return;
+  }
+
+  const parts = [];
+  if (planCache && planCache.length) {
+    const done = planCache.filter(function (x) { return x.status === 'done'; }).length;
+    parts.push('<span data-go="plan">本周 <b>' + done + '/' + planCache.length + '</b> 已谈</span>');
+  }
+  const rows = (focusData && focusData.rows) || [];
+  const active = rows.filter(function (r) { return r.status !== 'inactive'; });
+  const pending = active.filter(function (r) { return r.status !== 'done'; }).length;
+  if (active.length) {
+    parts.push(pending
+      ? '<span class="s-warn" data-go="focus"><b>' + pending + '</b> 人本周期未谈</span>'
+      : '<span class="s-ok" data-go="focus">关注全部已谈</span>');
+  }
+  el.innerHTML = parts.join('<span class="s-sep">·</span>') || '<span>填写 · 档案 · 名单 · 关注</span>';
+  el.querySelectorAll('[data-go]').forEach(function (s) {
+    s.addEventListener('click', function () { switchPage(s.dataset.go, 1); });
+  });
+}
+
+async function loadPlan() {
+  const el = $('planList');
+  try {
+    const d = await apiGet('/api/plan');
+    planCache = d.items || [];
+  } catch (e) {
+    el.innerHTML = '<div class="empty err">读取失败</div>';
+    return;
+  }
+  const pending = planCache.filter(function (x) { return x.status !== 'done'; }).length;
+  const badge = $('planBadge');
+  badge.hidden = pending === 0;
+  badge.textContent = pending;
+  $('planProgress').textContent = planCache.length ? (planCache.length - pending) + '/' + planCache.length + ' 已谈' : '';
+  $('planStat').textContent = pending ? pending + ' 人待谈' : '';
+
+  if (!planCache.length) {
+    el.innerHTML = '<div class="empty">名单是空的，先在上面添加</div>';
+    return;
+  }
+  // 计划时间已过 = 过期（未谈的才需要处理）
+  function isOverdue(it) {
+    if (!it || it.status === 'done' || !it.thrq) return false;
+    const t = new Date(it.thrq + 'T' + (it.kssj || '23:59') + ':00').getTime();
+    return isFinite(t) && Date.now() > t;
+  }
+
+  function itemHtml(it, showDate) {
+    const done = it.status === 'done';
+    const late = isOverdue(it);
+    const meta = (showDate && it.thrq ? fmtDate(it.thrq) + ' · ' : '') +
+      (it.xh ? escapeHtml(it.xh) + ' · ' : '') + escapeHtml(it.thdd || '未定地点');
+    return '<div class="item' + (done ? ' done' : '') + (late && !done ? ' late' : '') + '">' +
+      '<div class="time"' + (done ? '' : ' data-edit="' + it.id + '"') + '>' + escapeHtml(it.kssj || '--:--') + '</div>' +
+      '<div class="who"><b>' + escapeHtml(it.xm) +
+      (it.bj ? ' <span class="pill">' + escapeHtml(it.bj) + '</span>' : '') +
+      (done ? ' <span class="pill ok">已谈</span>' : '') + '</b>' +
+      '<small>' + meta + '</small></div>' +
+      '<div class="act">' +
+      (done ? '' : '<button class="btn sm primary" data-fill="' + it.id + '">填写</button>') +
+      '<button class="btn sm" data-del="' + it.id + '" style="color:#ef4444">删</button>' +
+      '</div></div>';
+  }
+
+  // 待谈按日期正序；已谈的自动下沉到底部折叠区（按日期倒序）
+  const pendList = planCache.filter(function (x) { return x.status !== 'done'; })
+    .sort(function (a, b) { return (a.thrq + a.kssj).localeCompare(b.thrq + b.kssj); });
+  const doneList = planCache.filter(function (x) { return x.status === 'done'; })
+    .sort(function (a, b) { return (b.thrq + b.kssj).localeCompare(a.thrq + a.kssj); });
+
+  const groups = {};
+  pendList.forEach(function (it) {
+    const k = it.thrq || '未定';
+    (groups[k] = groups[k] || []).push(it);
+  });
+
+  let html = Object.keys(groups).sort().map(function (k) {
+    const arr = groups[k];
+    return '<div class="daygroup"><div class="daybar"><b>' + fmtDate(k) + '</b><span>' + arr.length + ' 待谈</span></div>' +
+      arr.map(function (it) { return itemHtml(it, false); }).join('') + '</div>';
+  }).join('');
+
+  if (doneList.length) {
+    html += '<details class="donegroup"><summary class="daybar"><b>已谈 ' + doneList.length + ' 人</b>' +
+      '<span>展开 / 收起</span></summary>' +
+      doneList.map(function (it) { return itemHtml(it, true); }).join('') + '</details>';
+  }
+
+  el.innerHTML = html || '<div class="empty">名单里的人都谈完了</div>';
+
+  el.querySelectorAll('[data-fill]').forEach(function (b) {
+    b.addEventListener('click', function () { fillFromPlan(b.dataset.fill); });
+  });
+  el.querySelectorAll('[data-edit]').forEach(function (b) {
+    b.addEventListener('click', function () { openEdit(b.dataset.edit); });
+  });
+  renderSub();
+  el.querySelectorAll('[data-del]').forEach(function (b) {
+    b.addEventListener('click', async function () {
+      const id = b.dataset.del;
+      const it = planCache.find(function (x) { return x.id === id; });
+      if (!confirm('从名单删除「' + (it ? it.xm : '') + '」？')) return;
+      try {
+        const res = await apiWrite('/api/plan/' + encodeURIComponent(id), { method: 'DELETE' }, '删除名单');
+        if (res.queued) toast('离线已记录，联网后删除');
+      } catch (e) { toast('删除失败：' + e.message); }
+      loadPlan();
+    });
+  });
+}
+
+/* ---------- 改期 ---------- */
+let editingId = null;
+
+function openEdit(id) {
+  const it = planCache.find(function (x) { return x.id === id; });
+  if (!it) return;
+  editingId = id;
+  $('editWho').textContent = it.xm + (it.bj ? ' · ' + it.bj : '') +
+    (it.thrq ? '　原定 ' + fmtDate(it.thrq) + ' ' + (it.kssj || '') : '');
+  $('eRq').value = it.thrq || '';
+  $('eSj').value = it.kssj || '';
+  $('eDd').value = it.thdd || '';
+  $('editOv').classList.add('show');
+}
+
+$('eCancel').addEventListener('click', function () {
+  $('editOv').classList.remove('show');
+  editingId = null;
+});
+
+$('eFill').addEventListener('click', function () {
+  const id = editingId;
+  $('editOv').classList.remove('show');
+  editingId = null;
+  if (id) fillFromPlan(id);
+});
+
+$('eSave').addEventListener('click', async function () {
+  if (!editingId) return;
+  const thrq = $('eRq').value, kssj = $('eSj').value;
+  if (!thrq || !kssj) return toast('请填写日期和时间');
+  $('eSave').disabled = true;
+  try {
+    const d = await apiWrite('/api/plan/' + encodeURIComponent(editingId), {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ thrq: thrq, kssj: kssj, thdd: $('eDd').value.trim() })
+    }, '改期');
+    if (!d.ok) throw new Error(d.error || '保存失败');
+    $('editOv').classList.remove('show');
+    editingId = null;
+    toast(d.queued ? '离线已记录，联网后自动改期' : '已改到 ' + fmtDate(thrq) + ' ' + kssj);
+    loadPlan();
+  } catch (e) {
+    toast('保存失败：' + e.message);
+  }
+  $('eSave').disabled = false;
+});
+
+function fillFromPlan(id) {
+  const it = planCache.find(function (x) { return x.id === id; });
+  if (!it) return;
+  currentPlan = it;
+  $('xm').value = it.xm || '';
+  $('xh').value = it.xh || '';
+  if (it.thrq) $('thrq').value = it.thrq;
+  if (it.kssj) $('kssj').value = it.kssj;
+  if (it.thdd) $('thdd').value = it.thdd;
+  if (!$('thsc').value) $('thsc').value = '20';
+  saveDraft();
+  $('pfQuery').value = it.xh || it.xm || '';
+  $('pbName').textContent = it.xm + (it.xh ? ' · ' + it.xh : '');
+  $('pbMeta').textContent = fmtDate(it.thrq) + ' ' + (it.kssj || '') + (it.thdd ? ' · ' + it.thdd : '');
+  $('planBanner').classList.add('show');
+  switchTab('fill');
+  gotoPane('fill');
+  loadProfile(it.xh, it.xm);
+  toast('档案在右侧，可右滑查看');
+}
+
+$('pbBack').addEventListener('click', function () {
+  currentPlan = null;
+  $('planBanner').classList.remove('show');
+  switchTab('plan');
+});
+
+$('pAdd').addEventListener('click', async function () {
+  const xm = $('pXm').value.trim();
+  if (!xm) return toast('请填写姓名');
+  const xh = $('pXh').value.trim();
+  if (xh && !/^[0-9]{6,14}$/.test(xh)) return toast('学号要是 6–14 位数字');
+  if (!state.bj) return toast('请选择班级');
+  const body = { xm: xm, bj: state.bj, xh: xh, thrq: $('pRq').value, kssj: $('pSj').value, thdd: $('pDd').value.trim() };
+  $('pAdd').disabled = true;
+  try {
+  const d = await apiWrite('/api/plan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, '添加名单');
+    if (!d.ok) return toast(d.error || '添加失败');
+    $('pXm').value = '';
+    $('pXh').value = '';
+    $('pXm').focus();
+    toast(d.queued ? '离线已记录，联网后自动添加' : '已添加 ' + body.xm);
+    loadPlan();
+  } catch (e) {
+    toast('网络错误：' + e.message);
+  } finally {
+    $('pAdd').disabled = false;
+  }
+});
+
+/* ---------- 三页滑动 ---------- */
+
+(function bindSwipe() {
+  let sx = 0, sy = 0, t0 = 0, tracking = false, locked = false;
+  const skip = function (el) {
+    if (!el || !el.tagName) return true;
+    if (el.closest && el.closest('.bar')) return true;          // 底部按钮条
+    if (el.closest && el.closest('.overlay.show')) return true; // 确认弹窗
+    if (el.closest && el.closest('.pfcand')) return true;       // 同名候选列表
+    return false;
+  };
+  document.addEventListener('touchstart', function (e) {
+    tracking = false;
+    if (e.touches.length !== 1) return;
+    if (skip(e.target)) return;
+    const t = e.touches[0]; sx = t.clientX; sy = t.clientY; t0 = Date.now(); tracking = true;
+    locked = false;
+  }, { passive: false });
+  // 只有确认是横向手势时才阻止默认，避免接管纵向滚动与下拉刷新
+  document.addEventListener('touchmove', function (e) {
+    if (!tracking || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      locked = true;
+      if (e.cancelable) e.preventDefault();
+    }
+  }, { passive: false });
+  document.addEventListener('touchend', function (e) {
+    if (!tracking) return; tracking = false;
+    if (!locked) return;   // 非横向手势不切页
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Date.now() - t0 > 900) return;
+    if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+    const cur = PAGE_ORDER.indexOf(curPage);
+    const n = PAGE_ORDER.length;
+    const next = dx < 0 ? (cur + 1) % n : (cur + n - 1) % n;   // 循环切换
+    if (next !== cur) switchPage(PAGE_ORDER[next], dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
+
+// 数值格式化：百分比列转 %，绩点/成绩类保留两位小数
+function fmtVal(col, raw) {
+  const v = String(raw == null ? '' : raw).trim();
+  if (!v) return v;
+  const num = Number(v);
+  if (!isFinite(num)) return v;                 // "11/51"、"合格" 等原样返回
+  if (/百分比|占比|百分率/.test(col)) {
+    const pct = Math.abs(num) <= 1 ? num * 100 : num;
+    return pct.toFixed(2) + '%';
+  }
+  if (/绩点|平均分|成绩|分数|积分/.test(col)) return num.toFixed(2);
+  return v;
+}
+
+async function loadProfile(xh, xm) {
+  const box = $('profileBox');
+  box.innerHTML = '<div class="empty">加载中…</div>';
+  const q = xh ? ('xh=' + encodeURIComponent(xh)) : ('xm=' + encodeURIComponent(xm || ''));
+  let d = null;
+  try {
+    d = await apiGet('/api/student?' + q);
+  } catch (e) {
+    box.innerHTML = '<div class="empty err">档案读取失败</div>';
+    return;
+  }
+  if (!d || !d.ok) { box.innerHTML = '<div class="empty err">' + escapeHtml((d && d.error) || '读取失败') + '</div>'; return; }
+  if (d.ambiguous) {
+    box.innerHTML = '<div class="empty" style="padding-bottom:10px">同名 ' + d.candidates.length + ' 人，点选查看</div>' +
+      '<div class="pfcand">' + d.candidates.map(function (c) {
+        return '<button class="cand" data-xh="' + escapeHtml(c.xh || '') + '">' +
+          '<b>' + escapeHtml(c.xm || '') + '</b>　' + escapeHtml(c.xh || '无学号') +
+          (c.bj ? '　<span style="color:var(--dim)">' + escapeHtml(c.bj) + '</span>' : '') + '</button>';
+      }).join('') + '</div>';
+    box.querySelectorAll('.cand').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const xh = btn.dataset.xh;
+        $('pfQuery').value = xh;
+        loadProfile(xh, '');
+      });
+    });
+    return;
+  }
+  const stu = d.student;
+  if (!stu) {
+    box.innerHTML = '<div class="empty">未找到该学生档案<br><small style="color:var(--dim)">在电脑上运行 code/import_students.py 生成 data/students.json</small></div>';
+    return;
+  }
+  const cols = (d.columns || []).filter(function (c) { return c !== 'xh' && c !== 'xm' && c !== 'bj'; });
+  const head = '<div class="pfhead"><b>' + escapeHtml(stu.xm || '') + '</b><small>' +
+    escapeHtml(stu.xh || '') + (stu.bj ? ' · ' + escapeHtml(stu.bj) : '') + '</small></div>';
+  const items = cols.map(function (c) {
+    let v = String(stu[c] == null ? '' : stu[c]).trim();
+    if (!v) return '';
+    let cls = 'pfitem';
+    if (/身份证|证件号/.test(c)) v = v.replace(/^(.{6}).*(.{4})$/, '$1********$2');
+    if (/重点关注/.test(c) && /是/.test(v)) cls += ' danger';
+    else if (/心理测评/.test(c)) cls += ' warn';
+    else if (/困难/.test(c) && !/非困|无|不困难/.test(v)) cls += ' warn';
+    else if (/身份证|证件号/.test(c)) cls += ' wide';
+    else if (/住址|备注/.test(c)) cls += ' wide';
+    return '<div class="' + cls + '"><b>' + escapeHtml(c) + '</b><span>' + escapeHtml(fmtVal(c, v)) + '</span></div>';
+  }).join('');
+  box.innerHTML = head + '<div class="pfgrid">' + (items || '<div class="empty">档案没有可显示字段</div>') + '</div>';
+}
+
+/* ---------- 档案检索 ---------- */
+function doSearch() {
+  let q = ($('pfQuery').value || '').trim();
+  if (!q) q = ($('xh').value || '').trim() || ($('xm').value || '').trim();
+  if (!q) { toast('先输入姓名或学号'); return; }
+  if (!/^[0-9]{6,14}$/.test(q)) $('pfQuery').value = q;
+  const isXh = /^[0-9]{6,14}$/.test(q);
+  loadProfile(isXh ? q : '', isXh ? '' : q);
+}
+
+$('pfSearch').addEventListener('click', doSearch);
+
+$('pfClear').addEventListener('click', function () {
+  $('pfQuery').value = '';
+  $('profileBox').innerHTML = '<div class="empty">输入姓名/学号后点「检索」<br><small style="color:var(--dim)">或从「名单」点学生自动带入</small></div>';
+  $('pfQuery').focus();
+});
+$('pfQuery').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doSearch(); } });
+
+// 填写页姓名/学号变化时，若档案检索框为空则带上，便于直接点检索
+['xm', 'xh'].forEach(function (id) {
+  const el = $(id);
+  if (!el) return;
+  el.addEventListener('input', function () {
+    if (!$('pfQuery').value.trim()) $('pfQuery').value = $('xh').value.trim() || el.value.trim();
+  });
+});
+
+/* ---------- 主题 ---------- */
+const THEME_KEY = 'talk_theme';
+function applyTheme(t, animate) {
+  const root = document.documentElement;
+  const next = t === 'dark' ? 'dark' : 'light';
+  if (animate && root.dataset.theme !== next) {
+    root.classList.add('theme-anim');
+    setTimeout(function () { root.classList.remove('theme-anim'); }, 340);
+  }
+  root.dataset.theme = next;
+  $('themeBtn').textContent = next === 'dark' ? '浅色' : '深色';
+  try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+}
+$('themeBtn').addEventListener('click', function () {
+  const cur = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  applyTheme(cur === 'dark' ? 'light' : 'dark', true);
+});
+applyTheme(localStorage.getItem(THEME_KEY) || 'light');
+
+/* ---------- 启动 ---------- */
+loadDraft();
+buildChips();
+initDefaults();
+refreshRecent();
+loadPlan();
+// 从名单进入时 URL 带 #plan 直接打开名单
+switchPage('fill', 1);
+if (location.hash === '#plan') switchPage('plan', 1);
+refreshNotifyState();
+loadPlan();
+loadFocus();
+// 一次性上报屏幕尺寸（调试适配用，同一会话只发一次）
+if (!sessionStorage.getItem('talk_screen_sent')) {
+  setTimeout(function () {
+    try {
+      fetch('/api/client-info', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          w: innerWidth, h: innerHeight, dpr: devicePixelRatio,
+          sw: screen.width, sh: screen.height,
+          ua: navigator.userAgent
+        })
+      });
+      sessionStorage.setItem('talk_screen_sent', '1');
+    } catch (e) {}
+  }, 1200);
+}
+setTimeout(function () { localNotify(null, false); }, 3000);
+startAlertStream();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(function () {});
+}
+</script>
+</body>
+</html>

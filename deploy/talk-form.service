@@ -1,0 +1,14 @@
+[Unit]
+Description=Talk form service (谈心谈话手机端)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/talk-form
+ExecStart=/usr/local/bin/node server.mjs
+Restart=always
+RestartSec=3
+Environment=TALK_PORT=8787
+
+[Install]
+WantedBy=default.target
